@@ -1,1 +1,11 @@
 This project is for analyzing the relationship between friends defined in DaTouTie which is a picture sync mobile app that can push&pull pictures to&from your friends automaticly.
+
+you should build the running enviroment for this app:
+
+1. build BerkeleyDB 4.7.x libevent 1.4.x for memcacheq and then build memcacheq
+2. running memcacheq : memcacheq -d -r -p20201 -H /data1/memcacheq -N -R -v -L 1024 -B 1024 > /data1/mq_error.log 2>&1  
+3. config the ~/conf/link_mining.xml to match your running enviroment
+4. build redis and deps/hiredis/,both make installed
+5. config redis and running redis: redis-server (CONF_PATH)/redis.conf
+6. config the ~/conf/redis.conf(not the same as conf_file above,this is the redis_conf_file for link_mining).
+7. now you can build this project and run it(TODO: running parameter) .
