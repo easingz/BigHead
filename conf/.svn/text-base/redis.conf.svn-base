@@ -1,0 +1,24 @@
+[General]
+#max keep alive connections for one memcached server
+#default 10
+maxconns=20
+
+#-1 retry until conn
+reconn_times=-1
+#min keep alive connections for one memcached server
+#default=5
+minconns=10
+
+#redis_log
+redis_log=/home/saint/redis_client
+
+#level debug, info,warn,err
+log_level=debug
+
+#redis_servers lists
+
+[RedisServers]
+redis1=localhost:10000
+redis2=localhost:11000
+redis3=localhost:12000
+redis4=localhost:13000

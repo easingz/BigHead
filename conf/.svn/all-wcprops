@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 38
+/svn/link_mining/!svn/ver/2/trunk/conf
+END
+redis.conf
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/link_mining/!svn/ver/2/trunk/conf/redis.conf
+END
+link_mining.xml
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/link_mining/!svn/ver/2/trunk/conf/link_mining.xml
+END
+advance_link_mining.xml
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/link_mining/!svn/ver/2/trunk/conf/advance_link_mining.xml
+END
