@@ -12,13 +12,13 @@
 /* logging */
 typedef struct log_st
 {
-    FILE            *file;      
-    char            *fileName;  
-    char            *filePath;  
+    FILE            *file;      /* ��־����ļ������� */
+    char            *fileName;  /* ��־����ļ���� */
+    char            *filePath;  /* ��־����ļ�����Ŀ¼ */
     int             isDebug;
-    size_t          maxSize;    
-    size_t          actSize;    
-    pthread_mutex_t mutex;      
+    size_t          maxSize;    /* ��־�ļ�����С */
+    size_t          actSize;    /* ��־�ļ�ʵ�ʴ�С */
+    pthread_mutex_t mutex;      /* ��־�ļ��� */
 } *log_t;
 
 static const unsigned long  dftFileSize = (1 * 0x400 * 0x100000L);		// 1G
@@ -53,7 +53,7 @@ void gozap_log_init(const char *log_dir, int log_flag, const char *log_progname)
     sLogger->filePath = strdup(log_dir);
     sLogger->maxSize = dftFileSize;
 
-	
+	//��ȡ�ļ���ԭʼ��С
     if (stat(ident, &st) == -1) {
         sLogger->actSize = 0;
 	} else {
