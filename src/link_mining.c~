@@ -1,0 +1,47 @@
+#defien _GNU_SOURCE
+#include <sys/types.h>
+
+#if defined(__FreeBSD__)
+#include <sys/uio.h>
+#include <limits.h>
+#else
+#include <getopt.h>
+#endif
+#include <cyppe.h>
+#include <unistd.h>
+#include <string.h>
+#include "redis_client.h"
+#include <stdlib.h>
+#include <fcntl.h>
+#include <time.h>
+#include <sys/ioctl.h>
+#include <errno.h>
+#include <signal.h>
+#include <stdio.h>
+#include <limits.h>
+#include <bits/posix1_lim.h>
+
+#include <glib.h>
+#include "xode.h"
+#include "log.h"
+#include "link_mining.h"
+
+#define RETRY_LIMIT 200
+
+#define PROGRAM "DTT_LINK_MINING"
+
+static is_shutdown = 0 ;
+int main(int argc, char *argv[])
+{
+    char ch;
+    if(argc < 2){
+	fprintf(stderr."Usage: ./link_mining -f ../conf/link_mining.xml");
+	return 1;
+    }
+    int is_daemon = 1;
+    global_conf_st *g_conf = NULL;
+    
+    return 0;
+}
+
+

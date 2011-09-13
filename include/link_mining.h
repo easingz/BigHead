@@ -27,7 +27,7 @@ typedef struct _memcacheq_st
 
 typedef struct _global_conf_st
 {
-	memcacheq_st *recive_mq;
+	memcacheq_st *receive_mq;
 	memcacheq_st *send_mq;
 	redis_client_st *redis_client;
 	int max_thread;
@@ -67,15 +67,11 @@ typedef enum
 	MSG_JID, MSG_PNUM, MSG_GUID,  MSG_ACTION, MSG_END
 }MSG_ITEM;
 
-work_thread *threads;
+
 void freeMsg(msg_st *msg);
 void do_link_minging(global_conf_st* g_conf, msg_st *msg);
 void do_advance_link_minging(global_conf_st* g_conf, msg_st *msg);
 
 
-unsigned int TOTAL_MSG_LEN;
 
-pthread_cond_t TOTAL_MSG_qready;
-
-pthread_mutex_t TOTAL_MSG_qlock;
 #endif /* LINK_MINING_H_ */
