@@ -466,8 +466,8 @@ static void thread_init(global_conf_st * g_conf)
 	exit(-1);
     }
     for(i = 0 ;i < nthreads;i++){
-	threads[i]->g_conf = g_conf;
-	threads[i]->msg_queue = g_async_queue_new();
+	threads[i].g_conf = g_conf;
+	threads[i].msg_queue = g_async_queue_new();
     }
     for(i = 0 ;i < nthreads;i++){
 	create_worker(worker_thread,&threads);
@@ -483,6 +483,19 @@ static int init_msg(msg_st *msg,char * msg_str)
 {
     //TODO:transformat msg_str to msg structure
     return 0;
+}
+
+static int is_blank_line(char *line)
+{
+    int i;
+    if (line == NULL)
+	return 1;
+    for (i = 0; i < strlen(line); i++)
+    {
+	if ((!isspace(line[i])) && (!isblank(line[i])))
+	    return 0;
+    }
+    return 1;
 }
 
 static void reload_dump(global_conf_st *g_conf)
@@ -604,22 +617,24 @@ static void * receive_thread(void *arg)
     int look_index;
     while(!is_shutdown)
     {
-	look_index = 0;
-	jlog(L_DEBUG,"200 times not get msg,sleep(1)");
-	sleep(1);
+	if(look_index >= RETRY_LIMIT){
+	    look_index = 0;
+	    jlog(L_DEBUG,"200 times not get msg,sleep(1)");
+	    sleep(1);
+	}
+	if(-1 == receive_dispatch(g_conf)){
+	    look_index++;
+	}
+	else{
+	    look_index = 0;
+	}
+	pthread_mutex_lock(&msg_proc_lock);
+	while(MSG_PROCESSING > g_conf->max_msg_queue_len){
+	    pthread_cond_wait(&msg_proc_ready,&msg_proc_lock);
+	}
+	pthread_mutex_unlock(&msg_proc_lock);
     }
-    if(-1 == receive_dispatch(g_conf)){
-	look_index++;
-    }
-    else{
-	look_index = 0;
-    }
-    pthread_mutex_lock(&msg_proc_lock);
-    while(MSG_PROCESSING > g_conf->max_msg_queue_len){
-	pthread_cond_wait(&msg_proc_ready,&msg_proc_lock);
-    }
-    pthread_mutex_unlock(&msg_proc_lock);
-    pthread_wait(NULL);
+    pthread_exit(NULL);
 }
 
 
