@@ -1,4 +1,4 @@
-#defien _GNU_SOURCE
+#define _GNU_SOURCE
 #include <sys/types.h>
 
 #if defined(__FreeBSD__)
@@ -7,7 +7,7 @@
 #else
 #include <getopt.h>
 #endif
-#include <cyppe.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <string.h>
 #include "redis_client.h"
@@ -30,10 +30,11 @@
 
 #define PROGRAM "DTT_LINK_MINING"
 
-static is_shutdown = 0 ;
+static int is_shutdown = 0 ;
+static int init_count = 0;
 
 static pthread_mutex_t init_lock;
-static pthread_mutex_t init_cond;
+static pthread_cond_t init_cond;
 
 static work_thread *threads;
 static unsigned int MSG_PROCESSING;
@@ -251,12 +252,6 @@ static void init_mq(global_conf_st *g_conf, xode pnode)
 	fprintf(stderr, "task_name is needed\n");
 	exit(1);
     }
-    if (receive_type >= ERROR_TASK)
-    {
-	fprintf(stderr,
-		"we can only accept task_name link_mining and advance_link_mining \n");
-	exit(1);
-    }
     if (NULL == (addr = xode_get_tagdata(receive_node, "mqAddr")))
     {
 	fprintf(stderr, "mq addr is needed\n");
@@ -372,7 +367,7 @@ static void init_global_config(global_conf_st *g_conf, char *file)
     char program[128];
     memset(program, 0, sizeof(program));
     init_mq(g_conf, pnode);
-    snprintf(program, sizeof(program), "%s-%s", PROGRAME,
+    snprintf(program, sizeof(program), "%s-%s", PROGRAM,
 	     g_conf->receive_mq->task_name);
 
     gozap_log_init(g_conf->log_dir, L_level, program);
@@ -414,7 +409,7 @@ static void create_worker(void*(*fun)(void *),void * arg)
     pthread_t thread_pid;
     int ret;
     pthread_attr_init(&attr);
-    pthrad_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
+    pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
     if(0 != (ret = pthread_create(&thread_pid,&attr,fun,arg))){
 	fprintf(stderr,"%s:%d create failed\n",__FILE__,__LINE__);
 	exit(-1);
@@ -437,7 +432,7 @@ static void * worker_thread(void *arg)
     global_conf_st * g_conf = thread_info->g_conf;
     thread_info->ppid = pthread_self();
     msg_st * msg;
-    pthrad_mutex_lock(&init_lock);
+    pthread_mutex_lock(&init_lock);
     init_count++;
     pthread_cond_signal(&init_cond);
     pthread_mutex_unlock(&init_lock);
@@ -452,8 +447,8 @@ static void * worker_thread(void *arg)
 	sleep(1);
 	free(msg);
     }
-    pthrad_cleanup_pop(1);
-    pthrad_exit(NULL);
+    pthread_cleanup_pop(1);
+    pthread_exit(NULL);
 }
 
 
@@ -481,6 +476,81 @@ static void thread_init(global_conf_st * g_conf)
 	pthread_cond_wait(&init_cond,&init_lock);
     }
     pthreads_mutex_unlock(&init_lock);
+}
+static void reload_dump(global_conf_st *g_conf)
+{
+    FILE *fp = NULL;
+    char line[2048];
+    if (g_conf->reload_file)
+    {
+	if ((fp = fopen(g_conf->reload_file, "r")) == NULL)
+	{
+	    jlog(L_ERR, "reload file is not exist ");
+	    return;
+	}
+	while (!feof(fp))
+	{
+	    memset(line, 0, sizeof(line));
+	    fgets(line, sizeof(line), fp);
+	    jlog(L_DEBUG, "reload %s\n", line);
+	    if (is_blank_line(line))
+		break;
+	    jlog(L_DEBUG, "reload %s\n", line);
+	    msg_st *msg = (msg_st *) calloc(sizeof(msg_st), 1);
+	    if (msg == NULL)
+	    {
+		jlog(L_ERR, "out of memory");
+		exit(1);
+	    }
+	    if (-1 == init_msg(msg, line))
+	    {
+		if (msg)
+		    free(msg);
+		return ;
+	    }
+
+	    int thread_index = g_str_hash(msg->jid) % g_conf->max_thread;
+	    g_async_queue_push(threads[thread_index].msg_queue, msg);
+	    incrTotalMsgLen();
+	}
+	fclose(fp);
+	fp = fopen(g_conf->reload_file, "w");
+	fclose(fp);
+    }
+}
+
+static void save_dump(global_conf_st *g_conf)
+{
+    FILE *fp = NULL;
+    xode msg = NULL;
+    char *msg_str = NULL;
+    int i;
+    if (g_conf->reload_file)
+    {
+	fp = fopen(g_conf->reload_file, "a+");
+	if (fp == NULL)
+	{
+	    jlog(L_DEBUG, "try to create %s error\n", g_conf->reload_file);
+	    global_conf_free(g_conf);
+	    exit(-1);
+	}
+	for (i = 0; i < g_conf->max_thread; i++)
+	{
+	    while (g_async_queue_length(threads[i].msg_queue) > 0)
+	    {
+		msg = (xode) g_async_queue_pop(threads[i].msg_queue);
+		decrTotalMsgLen();
+		msg_str = xode_to_str(msg);
+		if (msg_str && (!is_blank_line(msg_str)))
+		{
+		    fprintf(fp, "%s\n", msg_str);
+		    jlog(L_DEBUG, "save %s\n", msg_str);
+		}
+		xode_free(msg);
+	    }
+	}
+	fclose(fp);
+    }
 }
 
 static int init_msg(msg_st *msg,char * msg_str)
@@ -526,7 +596,7 @@ static int receive_dispatch(global_conf_st *g_conf)
 
 static void * receive_thread(void *arg)
 {
-    global_conf_t * g_conf = (global_conf_t *)arg;
+    global_conf_st * g_conf = (global_conf_t *)arg;
     int look_index;
     while(!is_shutdown)
     {
@@ -542,9 +612,9 @@ static void * receive_thread(void *arg)
     }
     pthread_mutex_lock(&msg_proc_lock);
     while(MSG_PROCESSING > g_conf->max_msg_queue_len){
-	pthrad_cond_wait(&msg_proc_ready,&msg_proc_lock);
+	pthread_cond_wait(&msg_proc_ready,&msg_proc_lock);
     }
-    pthrad_mutex_unlock(&msg_proc_lock);
+    pthread_mutex_unlock(&msg_proc_lock);
     pthread_wait(NULL);
 }
 
@@ -589,14 +659,35 @@ int main(int argc, char *argv[])
     }
     signal(SIGINT,signal_handler);
     signal(SIGTERM,signal_handler);
-    signal(SIGHUP,signal_hander);
+    signal(SIGHUP,signal_handler);
     signal(SIGPIPE,SIG_IGN);
     if(is_daemon && (daemon(0,0) == -1)){
 	jlog(L_ERR,"daemon error");
     }
     thread_init(g_conf);
-    
-    
+    MSG_PROCESSING = 0;
+    reload_dump(g_conf);
+    pthread_t receive_ppid;
+    receive_ppid = init_receive_thread(g_conf);
+    int i;
+    while(!is_shutdown){
+	sleep(1);
+    }
+    save_dump(g_conf);
+    pthread_join(receive_ppid,NULL);
+    save_dump(g_conf);
+    int len = 0;
+    for(i = 0;i<g_conf->max_thread;i++){
+	len = g_async_queue_length(threads[i].msg_queue);
+	jlog(L_DEBUG,"(%d)len: %d",i,len);
+	pthread_cancel(threads[i].ppid);
+    }
+    pthread_mutex_lock(&init_lock);
+    while(init_count >0)
+	pthread_cond_wait(&init_cond,&init_lock);
+    pthread_mutex_unlock(&init_lock);
+
+    global_conf_free(g_conf);
     return 0;
 }
 
