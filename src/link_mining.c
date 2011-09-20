@@ -429,7 +429,7 @@ static void * worker_thread(void *arg)
 {
     work_thread * thread_info = (work_thread *)arg;
     GAsyncQueue *mq = thread_info->msg_queue;
-    global_conf_st * g_conf = thread_info->g_conf;
+    //global_conf_st * g_conf = thread_info->g_conf;
     thread_info->ppid = pthread_self();
     msg_st * msg;
     pthread_mutex_lock(&init_lock);
@@ -438,12 +438,13 @@ static void * worker_thread(void *arg)
     pthread_mutex_unlock(&init_lock);
     pthread_cleanup_push(cleanup,"exit");
     while(1){
+	sleep(1);
 	msg = (msg_st *)g_async_queue_pop(mq);
-	decrMsgProcNum();
 	if(NULL== msg)
 	    continue;
+	decrMsgProcNum();
 	//TODO:do link mining
-	fprintf(stderr,"%d is runnning,one message processed\n",thread_info->ppid);
+	fprintf(stderr,"%d is runnning,one message from pnum(%s) processed\n",(int)thread_info->ppid,msg->src_pnum);
 	sleep(1);
 	free(msg);
     }
@@ -482,6 +483,20 @@ static void thread_init(global_conf_st * g_conf)
 static int init_msg(msg_st *msg,char * msg_str)
 {
     //TODO:transformat msg_str to msg structure
+    char *tokens[2];
+    char *p = NULL;
+    char *savePtr = NULL;
+    char *token = NULL;
+    int i;
+    for(i = 0,p = msg_str;i < 2;i++){
+	token = strtok_r(p,",",&savePtr);
+	if(token == NULL)
+	    break;
+	tokens[i] = token;
+    }
+    strcpy(msg->src_pnum,tokens[0]);
+    strcpy(msg->dst_pnum,tokens[1]);
+    fprintf(stderr,"init_msg: %s is following %s\n",msg->src_pnum,msg->dst_pnum);
     return 0;
 }
 
@@ -530,7 +545,7 @@ static void reload_dump(global_conf_st *g_conf)
 		return ;
 	    }
 
-	    int thread_index = g_str_hash(msg->jid) % g_conf->max_thread;
+	    int thread_index = g_str_hash(msg->src_pnum) % g_conf->max_thread;
 	    g_async_queue_push(threads[thread_index].msg_queue, msg);
 	    incrMsgProcNum();
 	}
@@ -592,18 +607,19 @@ static int receive_dispatch(global_conf_st *g_conf)
     jlog(L_INFO,"receive fromtask %s --",task_name);
     jlog(L_INFO,"receive msg %s",msg_str);
     msg_st *msg = (msg_st *)calloc(sizeof(msg_st),1);
+    
     if(NULL == msg){
 	jlog(L_ERR,"out of memory");
 	exit(-1);
     }
-    IF(-1 == init_msg(msg,msg_str)){
+    if(-1 == init_msg(msg,msg_str)){
 	if(msg)
 	    free(msg);
 	if(msg_str)
 	    free(msg_str);
 	return 0;
     }
-    int thread_index = g_str_hash(msg->jid) % g_conf->max_thread;
+    int thread_index = g_str_hash(msg->src_pnum) % g_conf->max_thread;
     g_async_queue_push(threads[thread_index].msg_queue,msg);
     incrMsgProcNum();
     free(msg_str);
@@ -638,7 +654,7 @@ static void * receive_thread(void *arg)
 }
 
 
-static phtread_t init_receive_thread(global_conf_st *g_conf)
+static pthread_t init_receive_thread(global_conf_st *g_conf)
 {
     pthread_t ppid;
     int ret;
@@ -676,6 +692,7 @@ int main(int argc, char *argv[])
 	    fprintf(stderr,"Usage ./link_ming -f ../conf/link_mining.xml");
 	}
     }
+    g_thread_init(NULL);
     signal(SIGINT,signal_handler);
     signal(SIGTERM,signal_handler);
     signal(SIGHUP,signal_handler);

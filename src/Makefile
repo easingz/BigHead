@@ -17,7 +17,7 @@ CFLAGS =  -Wall -g -I. -I$(INCLUDEDIR) `pkg-config --cflags glib-2.0 gthread-2.0
 
 TARGETS = link_mining
 
-OBJ = link_mining.o  redis_op.o log.o
+OBJ = link_mining.o  log.o
 all: $(TARGETS)
 
 

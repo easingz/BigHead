@@ -44,8 +44,8 @@ typedef enum
 
 typedef struct _msg_st
 {
-	char jid[128];
-	char pnum[54];
+	char src_pnum[54];
+	char dst_pnum[54];
 	char guid[54];
 	action_type action;
 } msg_st;
