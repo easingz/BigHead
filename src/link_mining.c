@@ -455,9 +455,10 @@ static void * worker_thread(void *arg)
 
 static void thread_init(global_conf_st * g_conf)
 {
+    int i;
     pthread_mutex_init(&init_lock,NULL);
-    pthread_mutex_init(&init_cond,NULL);
-
+    pthread_cond_init(&init_cond,NULL);
+    
     int nthreads = g_conf->max_thread;
     threads = calloc(nthreads,sizeof(work_thread));
     if(!threads){
@@ -471,12 +472,19 @@ static void thread_init(global_conf_st * g_conf)
     for(i = 0 ;i < nthreads;i++){
 	create_worker(worker_thread,&threads);
     }
-    pthrad_mutex_lock(&init_lock);
+    pthread_mutex_lock(&init_lock);
     while(init_count < nthreads){
 	pthread_cond_wait(&init_cond,&init_lock);
     }
-    pthreads_mutex_unlock(&init_lock);
+    pthread_mutex_unlock(&init_lock);
 }
+
+static int init_msg(msg_st *msg,char * msg_str)
+{
+    //TODO:transformat msg_str to msg structure
+    return 0;
+}
+
 static void reload_dump(global_conf_st *g_conf)
 {
     FILE *fp = NULL;
@@ -511,7 +519,7 @@ static void reload_dump(global_conf_st *g_conf)
 
 	    int thread_index = g_str_hash(msg->jid) % g_conf->max_thread;
 	    g_async_queue_push(threads[thread_index].msg_queue, msg);
-	    incrTotalMsgLen();
+	    incrMsgProcNum();
 	}
 	fclose(fp);
 	fp = fopen(g_conf->reload_file, "w");
@@ -539,7 +547,7 @@ static void save_dump(global_conf_st *g_conf)
 	    while (g_async_queue_length(threads[i].msg_queue) > 0)
 	    {
 		msg = (xode) g_async_queue_pop(threads[i].msg_queue);
-		decrTotalMsgLen();
+		decrMsgProcNum();
 		msg_str = xode_to_str(msg);
 		if (msg_str && (!is_blank_line(msg_str)))
 		{
@@ -553,11 +561,7 @@ static void save_dump(global_conf_st *g_conf)
     }
 }
 
-static int init_msg(msg_st *msg,char * msg_str)
-{
-    //TODO:transformat msg_str to msg structure
-    return 0;
-}
+
 
 
 static int receive_dispatch(global_conf_st *g_conf)
@@ -566,7 +570,7 @@ static int receive_dispatch(global_conf_st *g_conf)
     size_t rtv;
     uint32_t rtf;
     memcached_return rc;
-    mecached_st *memc = g_conf->receive_mq->mq_server;
+    memcached_st *memc = g_conf->receive_mq->mq_server;
     char *task_name = g_conf->receive_mq->task_name;
     msg_str = memcached_get(memc,task_name,strlen(task_name),&rtv,&rtf,&rc);
     if(rc != MEMCACHED_SUCCESS){
@@ -587,7 +591,7 @@ static int receive_dispatch(global_conf_st *g_conf)
 	return 0;
     }
     int thread_index = g_str_hash(msg->jid) % g_conf->max_thread;
-    g_async_queue_push(threads[thread_index],msg_queue,msg);
+    g_async_queue_push(threads[thread_index].msg_queue,msg);
     incrMsgProcNum();
     free(msg_str);
     return 1;
@@ -596,7 +600,7 @@ static int receive_dispatch(global_conf_st *g_conf)
 
 static void * receive_thread(void *arg)
 {
-    global_conf_st * g_conf = (global_conf_t *)arg;
+    global_conf_st * g_conf = (global_conf_st *)arg;
     int look_index;
     while(!is_shutdown)
     {
@@ -619,7 +623,7 @@ static void * receive_thread(void *arg)
 }
 
 
-static void init_receive_thread(global_conf_st *g_conf)
+static phtread_t init_receive_thread(global_conf_st *g_conf)
 {
     pthread_t ppid;
     int ret;
@@ -636,7 +640,7 @@ int main(int argc, char *argv[])
 {
     char ch;
     if(argc < 2){
-	fprintf(stderr."Usage: ./link_mining -f ../conf/link_mining.xml");
+	fprintf(stderr,"Usage: ./link_mining -f ../conf/link_mining.xml");
 	return 1;
     }
     int is_daemon = 1;
@@ -646,7 +650,7 @@ int main(int argc, char *argv[])
     while( -1 != (ch = getopt(argc,argv,"f:h:?:D"))){
 	switch(ch){
 	case 'f':
-	    init_global_conf(g_conf,optarg);
+	    init_global_config(g_conf,optarg);
 	    break;
 	case 'D':
 	    is_daemon = 0;
