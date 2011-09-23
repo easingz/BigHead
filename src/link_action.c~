@@ -1,0 +1,50 @@
+#include <link_mining.h>
+
+typedef struct redis_reply_array_st
+{
+    char **elements;
+    int size;
+}
+    rep_arr_st;
+static char *following_key(msg_st *msg)
+{
+    return generate_key("datoutie:relation:%s:following",msg->src_pnum);
+}
+
+static char *conn_key(msg_st *msg)
+{
+    return generate_key("datoutie:relation:%s:connection",msg->dst_pnum);
+}
+
+static void array_st_free(void *array)
+{
+    rep_arr_st *ar = (rep_arr_st *)array;
+    if(ar){
+	if(ar->size > 0){
+	    for(i = 0 ; i < ar->size ;i++){
+		if(ar->elements[i])
+		    free(ar->elements[i]);
+	    }
+	    free(ar->elements);
+	}
+	free(ar);
+    }
+}
+
+void do_link_mining(global_conf_st* g_conf,msg_st *msg)
+{
+    if(g_conf == NULL || msg == NULL)
+	return;
+    if(check_connection(g_conf,msg->dst_pnum,msg->src_pnum)){
+	add_conn(g_conf,msg->src_pnum,msg->dst_pnum);
+	send_conn_msg(g_conf,msg->src_pnum,msg->dst_pnum);
+    }
+    else if(check_following(g_conf,msg->dst_pnum,msg->src_pnum)){
+	ad_conn(g_conf,msg->src_pnum,msg->dst_pnum);
+	send_conn_msg(g_conf,msg->src_pnum,msg->dst_pnum);
+	add_conn(g_conf,msg->dst_pnum,msg->src_pnum);
+	send_conn_msg(g_conf,msg->dst_pnum,msg->src_pnum);
+    }
+    else{
+	send_
+

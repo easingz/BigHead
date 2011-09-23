@@ -429,7 +429,7 @@ static void * worker_thread(void *arg)
 {
     work_thread * thread_info = (work_thread *)arg;
     GAsyncQueue *mq = thread_info->msg_queue;
-    //global_conf_st * g_conf = thread_info->g_conf;
+    global_conf_st * g_conf = thread_info->g_conf;
     thread_info->ppid = pthread_self();
     msg_st * msg;
     pthread_mutex_lock(&init_lock);
@@ -443,6 +443,7 @@ static void * worker_thread(void *arg)
 	if(NULL== msg)
 	    continue;
 	decrMsgProcNum();
+	do_link_mining(g_conf,msg);
 	//TODO:do link mining
 	fprintf(stderr,"%d is runnning,one message from pnum(%s) processed\n",(int)thread_info->ppid,msg->src_pnum);
 	sleep(1);
@@ -471,7 +472,7 @@ static void thread_init(global_conf_st * g_conf)
 	threads[i].msg_queue = g_async_queue_new();
     }
     for(i = 0 ;i < nthreads;i++){
-	create_worker(worker_thread,&threads);
+	create_worker(worker_thread,&threads[i]);
     }
     pthread_mutex_lock(&init_lock);
     while(init_count < nthreads){
@@ -484,7 +485,7 @@ static int init_msg(msg_st *msg,char * msg_str)
 {
     //TODO:transformat msg_str to msg structure
     char *tokens[2];
-    char *p = NULL;
+    char *p = msg_str;
     char *savePtr = NULL;
     char *token = NULL;
     int i;
