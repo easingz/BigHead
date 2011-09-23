@@ -488,8 +488,10 @@ static int init_msg(msg_st *msg,char * msg_str)
     char *savePtr = NULL;
     char *token = NULL;
     int i;
-    for(i = 0,p = msg_str;i < 2;i++){
-	token = strtok_r(p,",",&savePtr);
+    token = strtok_r(p,",",&savePtr);
+    tokens[0] = token;
+    for(i = 1,p = msg_str;i < 2;i++){
+	token = strtok_r(NULL,",",&savePtr);
 	if(token == NULL)
 	    break;
 	tokens[i] = token;
