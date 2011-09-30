@@ -8,7 +8,7 @@ you should build the running enviroment for this app:
 4. build redis and deps/hiredis/,both make installed
 5. config redis and running redis: redis-server (CONF_PATH)/redis.conf
 6. config the ~/conf/redis.conf(not the same as conf_file above,this is the redis_conf_file for link_mining).
-7. now you can build this project and run it(TODO: running parameter) .
+7. now you can build this project and run it like ./link_mining -f ../conf/link_mining.xml
 
 NOTE:
 1. redis_err_log file path hardcoded in libredisclient.a

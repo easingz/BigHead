@@ -1,0 +1,32 @@
+#include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
+#include<sys/types.h>
+#include<libmemcached/memcached.h>
+#include<sys/time.h>
+
+long timer(int reset)
+{
+	static long start = 0;
+	struct timeval tv;
+
+	gettimeofday(&tv, NULL);
+
+	/* return timediff */
+	if (!reset)
+	{
+		long stop = ((long) tv.tv_sec) * 1000 + tv.tv_usec / 1000;
+		return (stop - start);
+	}
+
+	/* reset timer */
+	start = ((long) tv.tv_sec) * 1000 + tv.tv_usec / 1000;
+
+	return 0;
+}
+
+int main(int argc, char *argv[])
+{
+    
+    return 0;
+}

@@ -1,13 +1,13 @@
 <feedRouter>
 	<reloadFile>/home/sain/mycode/link_mining/reload.dump</reloadFile>
 	<receiveMq>
-		<mqName>test_q</mqName>
+		<mqName>datoutie_test_queue</mqName>
 		<mqAddr>127.0.0.1:21201</mqAddr>
 	</receiveMq>
 
 	<!--发送队列，发送队列制定了feed发送的名称，对应到feedProcessor-->
 	<sendMq>
-		<mqName>link_mining_result</mqName>
+		<mqName>datoutie_test_queue</mqName>
 		<mqAddr>127.0.0.1:21202</mqAddr>
 	</sendMq>
 	<maxMsgQueueLen>200</maxMsgQueueLen>
