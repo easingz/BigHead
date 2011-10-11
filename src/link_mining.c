@@ -135,8 +135,7 @@ static int xode_get_integer(xode pxode, char *item)
 }
 
 
-static char *
-xode_get_string(xode pxode, char *item)
+static char *xode_get_string(xode pxode, char *item)
 {
     if (NULL == pxode || NULL == item)
     {

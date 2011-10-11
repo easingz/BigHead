@@ -5,6 +5,7 @@
 #include<libmemcached/memcached.h>
 #include<sys/time.h>
 #include<unistd.h>
+#include <assert.h>
 
 long timer(int reset)
 {
@@ -25,6 +26,20 @@ long timer(int reset)
 
     return 0;
 }
+
+int find_str(char **expect,char *result)
+{
+    assert(expect!=NULL && result!=NULL);
+    int j,found=0;
+    for(j = 0;j < 8;j++){
+	if(NULL != strstr(expect[j],result)){
+	    found = 1;
+	    break;
+	}
+    }
+    return found;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -67,32 +82,20 @@ int main(int argc, char *argv[])
     result[5] = "<destRange><destJids>12345678912@datoutie.com</destJids></destRange><data><item><srcJid>12345678912@datoutie.com</srcJid><connJid>21987654321@datoutie.com</connJid><type>0</type></item></data>";//feed to A that A<->B
     result[6] = "<destRange><destJids>32165498798@datoutie.com</destJids></destRange><data><item><srcJid>32165498798@datoutie.com</srcJid><connJid>12345678912@datoutie.com</connJid><type>1</type></item></data>";//feed to D that D->A
     result[7] = "<destRange><destJids>12345678912@datoutie.com</destJids></destRange><data><item><srcJid>12345678912@datoutie.com</srcJid><connJid>32165498798@datoutie.com</connJid><type>2</type></item></data>";//feed to A that A<-D
-    int i ,j;
+    int i ,found;
     size_t rtv;
     uint32_t rtf;
-    char *found = NULL;
-    char *msg_str[8];
+    char *msg_str;
     sleep(10);
     for(i = 0;i < 8;i++){
-	msg_str[i] = memcached_get(send_mq,key,strlen(key),&rtv,&rtf,&rc);
-    }
-    for(i = 0;i < 8;i++){
-	for(j = 0;j < 8;j++){
-	    
-	    if(NULL != (found = strstr(result[i],msg_str[j]))){
-		fprintf(stderr,"passed 1 test ,totally 8 cases.\n");
-		break;
-	    }
-	}
-	if (NULL == found){
+	msg_str = memcached_get(send_mq,key,strlen(key),&rtv,&rtf,&rc);
+	found = find_str(result,msg_str);
+	if(found)
+	    fprintf(stderr,"passed 1 test ,totally 8 cases.\n");
+	else{
 	    fprintf(stderr,"failed 1 test ,totally 8 cases.\n");
-	    fprintf(stderr,"expect result:  %s \n",result[i]);
-	    fprintf(stderr,"got result:     %s \n",msg_str[i]);
 	}
-	found = NULL;
     }
-    for(i = 0;i < 8;i++){
-	free(msg_str[i]);
-    }
+    free(msg_str);
     return 0;
 }

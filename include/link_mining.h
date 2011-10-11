@@ -70,7 +70,7 @@ typedef enum
 
 void freeMsg(msg_st *msg);
 void do_link_minging(global_conf_st* g_conf, msg_st *msg);
-void do_advance_link_minging(global_conf_st* g_conf, msg_st *msg);
+
 
 
 

@@ -14,4 +14,4 @@ mc_set: $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^
 
 clean: 
-	rm -f *o *~ $(TARGETS)
+	rm -f *o *~ $(TARGET)
